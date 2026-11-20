@@ -1,0 +1,6 @@
+.venv/
+__pycache__/
+*.pyc
+*.tmp
+# per-computer settings (list of campaign folders on this machine)
+local.json

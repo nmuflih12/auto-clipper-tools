@@ -1,0 +1,21 @@
+{
+  "name": "Campaign baru",
+  "hashtags": [],
+  "watermark": {"enabled": false, "required": false, "path": "", "x": 0.5, "y": 0.5, "w": 1.0, "opacity": 1.0},
+  "banner": {"enabled": false, "required": false, "path": "", "x": 0.5, "y": 0.12, "w": 0.9, "opacity": 1.0,
+             "start": 0, "duration": 0, "anim": "fade"},
+  "bumper_in": {"enabled": false, "required": false, "path": "", "image_duration": 2.0},
+  "bumper_out": {"enabled": false, "required": false, "path": "", "image_duration": 3.0},
+  "output": {"width": 1080, "height": 1920, "fps": 30},
+  "language": "id",
+  "whisper_prompt": "",
+  "keywords": ["anjir", "anjay", "njir", "astaga", "gila", "gokil", "wkwk", "haha", "woi", "aduh", "waduh", "mampus",
+               "buset", "sumpah", "hah", "loh", "wow", "gas", "ngakak", "kocak", "epic", "gg"],
+  "allowed_channels": [],
+  "min_upload_date": "",
+  "checklist": [
+    "Isi klip sesuai brief campaign",
+    "Tidak ada kata/visual tidak pantas, SARA, atau narasi negatif ke pihak/brand lain",
+    "Ada editing/value tambahan (bukan reupload mentah), konteks tidak dipelintir"
+  ]
+}

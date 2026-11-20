@@ -1,0 +1,6 @@
+flask>=3.1
+yt-dlp[default]>=2026.10.26
+numpy>=2.0
+faster-whisper>=1.2.1
+# GPU transcription on Windows (ctranslate2 needs cuBLAS 12; cuDNN 9 ships inside ctranslate2)
+nvidia-cublas-cu12; sys_platform == "win32"

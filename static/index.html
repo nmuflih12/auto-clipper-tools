@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clipper</title>
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <button class="btn small" id="libBtn" title="Buka daftar video sumber">Video</button>
+  <div class="brand"><strong>Clipper</strong></div>
+  <select id="projectSel" class="project-sel" title="Ganti campaign (tiap campaign punya folder sendiri)"></select>
+  <button class="btn small" id="campaignBtn" title="Watermark, banner, bumper, hashtag, checklist">Pengaturan campaign</button>
+  <div class="assets" id="assetStatus"></div>
+  <button class="btn ghost" id="jobsBtn" title="Proses yang berjalan">Proses <span id="jobsCount"></span></button>
+</header>
+
+<div class="layout">
+  <!-- LEFT: sources -->
+  <aside class="library" id="library">
+    <section>
+      <div class="sec-head"><h2>Video sumber</h2><button class="btn small ghost" id="rescanBtn" title="Scan ulang folder raw/ dan downloads/">Scan</button></div>
+      <ul id="sourceList" class="source-list"></ul>
+      <p class="hint">Taruh video di folder <code>raw/</code>, atau ambil dari YouTube di bawah.</p>
+    </section>
+
+    <section class="yt">
+      <h2>Ambil dari YouTube</h2>
+      <form id="ytForm" class="row">
+        <input id="ytUrl" type="url" placeholder="https://youtube.com/watch?v=…" required>
+        <button class="btn" type="submit">Cek</button>
+      </form>
+      <div id="ytInfo" class="yt-info" hidden></div>
+    </section>
+
+    <section>
+      <div class="sec-head"><h2>Hasil export</h2><button class="btn small ghost" data-open="exports">Folder</button></div>
+      <ul id="exportList" class="export-list"></ul>
+    </section>
+  </aside>
+
+  <!-- CENTER: source editor -->
+  <main class="editor" id="editor">
+    <div id="editorEmpty" class="empty">
+      <h3>Pilih video sumber</h3>
+      <p>Klik video di daftar sumber (panel kiri, atau tombol <b>Video</b> di kiri atas pada layar kecil). Video baru perlu <b>Siapkan</b> dulu: bikin proxy preview + analisis suara untuk cari momen.</p>
+    </div>
+
+    <div id="editorPrepare" class="empty" hidden>
+      <h3 id="prepTitle"></h3>
+      <p>Video ini belum disiapkan. Langkah ini bikin file preview ringan, mendeteksi bar hitam, dan menganalisis suara untuk cari momen seru.</p>
+      <button class="btn primary" id="prepareBtn">Siapkan video</button>
+    </div>
+
+    <div id="editorMain" hidden>
+      <div class="src-head">
+        <h2 id="srcTitle"></h2>
+        <span id="srcMeta" class="muted"></span>
+        <label class="check"><input type="checkbox" id="showRects" checked> Kotak layout</label>
+      </div>
+
+      <div class="player-area" id="playerArea">
+        <div class="player-wrap" id="playerWrap">
+          <video id="srcVideo" preload="auto" playsinline></video>
+          <canvas id="rectCanvas"></canvas>
+        </div>
+      </div>
+
+      <div class="transport">
+        <button class="btn icon" id="playBtn" title="Play / pause (Spasi)">Play</button>
+        <span class="time" id="timeNow">0:00.0</span><span class="muted">/</span><span class="time muted" id="timeDur">0:00</span>
+        <button class="btn small ghost" data-seek="-5" title="Mundur 5 dtk (J)">−5</button>
+        <button class="btn small ghost" data-seek="-1" title="Mundur 1 dtk (←)">−1</button>
+        <button class="btn small ghost" data-seek="1" title="Maju 1 dtk (→)">+1</button>
+        <button class="btn small ghost" data-seek="5" title="Maju 5 dtk (L)">+5</button>
+        <span class="sep"></span>
+        <button class="btn small" id="inBtn" title="Tandai awal (I)">IN <span id="inVal" class="muted"></span></button>
+        <button class="btn small" id="outBtn" title="Tandai akhir (O)">OUT <span id="outVal" class="muted"></span></button>
+        <button class="btn small primary" id="addSegBtn" title="Tambah IN–OUT sebagai potongan (Enter)">+ Potongan</button>
+      </div>
+
+      <div class="timeline-wrap">
+        <canvas id="timeline"></canvas>
+        <div class="tl-legend muted">
+          <span><i class="sw sw-cand"></i>momen terdeteksi</span>
+          <span><i class="sw sw-seg"></i>potongan klip</span>
+          <span id="heatLegend" hidden><i class="sw sw-heat"></i>most replayed</span>
+          <span class="tl-tip">scroll = zoom · shift+scroll = geser · tarik ujung potongan untuk trim</span>
+        </div>
+      </div>
+
+      <div class="tabs" data-tabs="lower">
+        <button class="tab active" data-tab="moments">Momen</button>
+        <button class="tab" data-tab="transcript">Transkrip</button>
+      </div>
+      <div class="tabpanes lower-panes" data-panes="lower">
+        <div class="pane active" data-pane="moments">
+          <div class="row wrap gap">
+            <span class="muted">Jendela momen:</span>
+            <label class="inline">sebelum <input type="number" id="candPre" value="12" min="2" max="60" step="1"> dtk</label>
+            <label class="inline">sesudah <input type="number" id="candPost" value="8" min="2" max="60" step="1"> dtk</label>
+            <button class="btn small ghost" id="recalcBtn">Hitung ulang</button>
+            <span class="grow"></span>
+            <button class="btn small" id="transcribeBtn">Transkrip (Whisper)</button>
+          </div>
+          <ol id="candList" class="cand-list"></ol>
+        </div>
+        <div class="pane" data-pane="transcript">
+          <div class="row gap">
+            <input type="search" id="trSearch" placeholder="Cari kata di transkrip…">
+          </div>
+          <ol id="trList" class="tr-list"></ol>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- RIGHT: clip -->
+  <section class="clip-panel" id="clipPanel">
+    <div class="clip-head">
+      <select id="clipSelect" title="Klip untuk video ini"></select>
+      <button class="btn small" id="newClipBtn">Baru</button>
+      <button class="btn small ghost" id="dupClipBtn">Duplikat</button>
+      <button class="btn small ghost danger" id="delClipBtn">Hapus</button>
+    </div>
+
+    <div id="clipEmpty" class="empty small">
+      <p>Belum ada klip. Pilih momen lalu klik <b>Klip baru</b>, atau tandai IN/OUT lalu <b>+ Potongan</b>.</p>
+    </div>
+
+    <div id="clipBody" class="clip-body" hidden>
+      <div class="clip-top">
+        <canvas id="preview" width="540" height="960"></canvas>
+        <div class="clip-side">
+          <label class="field">Nama klip <input id="clipTitle" class="title-input" placeholder="Nama klip"></label>
+          <button class="btn" id="progBtn" title="Putar hasil klip (P)">Putar klip</button>
+          <span class="time muted" id="progTime">0:00 / 0:00</span>
+          <span class="grow"></span>
+          <button class="btn" id="draftBtn" title="Render cepat 540×960 untuk cek">Render draft</button>
+          <button class="btn primary" id="exportBtn" title="Render 1080×1920 ke folder exports">Export final</button>
+        </div>
+      </div>
+
+      <div class="tabs" data-tabs="clip">
+        <button class="tab active" data-tab="cuts">Potongan</button>
+        <button class="tab" data-tab="layout">Layout</button>
+        <button class="tab" data-tab="text">Teks</button>
+        <button class="tab" data-tab="audio">Audio</button>
+        <button class="tab" data-tab="export">Export</button>
+      </div>
+      <div class="tabpanes clip-panes" data-panes="clip">
+        <!-- cuts -->
+        <div class="pane active" data-pane="cuts">
+          <ol id="segList" class="seg-list"></ol>
+          <p class="muted" id="segTotal"></p>
+          <p class="hint">Zoom <b>punch</b> = hentakan zoom di awal potongan, <b>push</b> = zoom pelan, kecepatan 0.5× untuk slow-mo momen epic.</p>
+        </div>
+
+        <!-- layout -->
+        <div class="pane" data-pane="layout">
+          <div class="seg-control" id="layoutMode">
+            <button data-mode="split">Split cam</button>
+            <button data-mode="fit">Fit + blur</button>
+            <button data-mode="crop">Crop penuh</button>
+          </div>
+          <div data-show="split">
+            <label class="field">Tinggi facecam <span id="splitVal" class="muted"></span>
+              <input type="range" id="splitRatio" min="0.25" max="0.55" step="0.01"></label>
+            <label class="check"><input type="checkbox" id="camTop"> Facecam di atas</label>
+            <p class="hint">Geser/resize kotak <b>CAM</b> dan <b>GAMEPLAY</b> langsung di video sumber.</p>
+          </div>
+          <div data-show="fit">
+            <label class="field">Zoom gameplay <span id="fitZoomVal" class="muted"></span>
+              <input type="range" id="fitZoom" min="1" max="2.2" step="0.05"></label>
+            <label class="field">Posisi vertikal <input type="range" id="fitY" min="0" max="1" step="0.01"></label>
+            <label class="field">Background
+              <select id="fitBg"><option value="blur">Blur dari video</option><option value="black">Hitam</option></select></label>
+          </div>
+          <div data-show="crop">
+            <p class="hint">Geser kotak <b>CROP</b> di video sumber ke area yang mau ditampilkan.</p>
+          </div>
+          <button class="btn small ghost" id="saveDefaultLayout">Jadikan default untuk video ini</button>
+        </div>
+
+        <!-- text -->
+        <div class="pane" data-pane="text">
+          <h4>Judul hook</h4>
+          <textarea id="hookText" rows="2" placeholder="Contoh: STREAMER DIKEJAR *POLISI* SATU KOTA"></textarea>
+          <p class="hint">Bungkus kata dengan *bintang* untuk warna aksen. Enter = baris baru.</p>
+          <div class="grid2">
+            <label class="field">Gaya <select id="hookStyle"></select></label>
+            <label class="field">Tampil (dtk, 0 = full) <input type="number" id="hookDur" min="0" step="0.5"></label>
+          </div>
+          <label class="field">Posisi vertikal <input type="range" id="hookY" min="0.03" max="0.9" step="0.01"></label>
+
+          <h4>Caption otomatis</h4>
+          <div id="capNoTranscript" class="note" hidden>Belum ada transkrip untuk video ini. Klik <b>Transkrip (Whisper)</b> di tab Momen.</div>
+          <label class="check"><input type="checkbox" id="capOn"> Tampilkan caption</label>
+          <div class="grid2">
+            <label class="field">Gaya <select id="capStyle"></select></label>
+            <label class="field">Kata per tampilan <select id="capWords"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+            <label class="field">Warna highlight <input type="color" id="capHl"></label>
+            <label class="check"><input type="checkbox" id="capUpper"> HURUF BESAR</label>
+          </div>
+          <label class="field">Posisi vertikal <input type="range" id="capY" min="0.1" max="0.92" step="0.01"></label>
+          <details>
+            <summary>Edit kata caption (<span id="wordCount">0</span>)</summary>
+            <p class="hint">Ubah ejaan, atau kosongkan kotak untuk menyembunyikan kata. Klik label waktu untuk lompat.</p>
+            <div id="wordEditor" class="word-editor"></div>
+          </details>
+
+          <h4>Teks tambahan</h4>
+          <ol id="ovList" class="ov-list"></ol>
+          <button class="btn small" id="addOvBtn">+ Teks di detik ini</button>
+        </div>
+
+        <!-- audio -->
+        <div class="pane" data-pane="audio">
+          <h4>Suara asli</h4>
+          <label class="field">Volume suara video <span id="voiceVal" class="muted"></span>
+            <input type="range" id="voiceVol" min="0" max="2" step="0.05"></label>
+
+          <h4>Backsound</h4>
+          <div class="row gap">
+            <select id="musicSel" class="grow" title="File dari assets/music"></select>
+            <button class="btn small ghost" id="musicPrev">Dengar</button>
+          </div>
+          <div id="musicOpts">
+            <div class="grid2">
+              <label class="field">Volume <span id="musicVolVal" class="muted"></span>
+                <input type="range" id="musicVol" min="0" max="1" step="0.01"></label>
+              <label class="field">Mulai dari detik ke <input type="number" id="musicStart" min="0" step="0.5"></label>
+              <label class="field">Fade in (dtk) <input type="number" id="musicFadeIn" min="0" max="5" step="0.1"></label>
+              <label class="field">Fade out (dtk) <input type="number" id="musicFadeOut" min="0" max="5" step="0.1"></label>
+            </div>
+            <label class="check"><input type="checkbox" id="musicDuck"> Kecilkan backsound saat ada suara (ducking)</label>
+          </div>
+          <p class="hint">Backsound hanya di bagian klip, tidak menimpa outro. Pakai musik bebas royalti: lagu berhak cipta bisa membuat video di-mute atau diklaim platform.</p>
+
+          <h4>Sound effect</h4>
+          <p class="hint">Klik nama untuk dengar. <b>+</b> menaruhnya di detik preview sekarang (geser dulu video ke momennya).</p>
+          <div id="sfxLib" class="sfx-lib"></div>
+          <ol id="sfxList" class="sfx-list"></ol>
+
+          <div class="row wrap gap" style="margin-top:10px">
+            <button class="btn small ghost" data-open="assets/music">Folder musik</button>
+            <button class="btn small ghost" data-open="assets/sfx">Folder SFX</button>
+            <button class="btn small ghost" id="audioReload">Muat ulang daftar</button>
+          </div>
+          <p class="hint">Tambah file sendiri (.mp3, .wav, .m4a, .ogg) ke <code>assets/music</code> atau <code>assets/sfx</code>, lalu klik Muat ulang daftar.</p>
+        </div>
+
+        <!-- export -->
+        <div class="pane" data-pane="export">
+          <h4>Branding</h4>
+          <div id="brandToggles"></div>
+          <details id="wmAdjust">
+            <summary>Geser watermark khusus klip ini</summary>
+            <div class="grid2">
+              <label class="field">Ukuran <input type="range" id="wmW" min="0.1" max="1" step="0.01"></label>
+              <label class="field">Opasitas <input type="range" id="wmOp" min="0.2" max="1" step="0.05"></label>
+              <label class="field">Posisi X <input type="range" id="wmX" min="0" max="1" step="0.005"></label>
+              <label class="field">Posisi Y <input type="range" id="wmY" min="0" max="1" step="0.005"></label>
+            </div>
+            <button class="btn small ghost" id="wmReset">Kembalikan ke setelan campaign</button>
+          </details>
+          <button class="btn small ghost" data-campaign-open>Atur watermark, banner, bumper…</button>
+
+          <h4>Output</h4>
+          <label class="check"><input type="checkbox" id="loudOn"> Normalisasi volume (−14 LUFS)</label>
+          <label class="field">FPS <select id="fpsSel"><option value="30">30</option><option value="60">60</option></select></label>
+
+          <h4>Caption postingan</h4>
+          <textarea id="postCaption" rows="4"></textarea>
+          <div class="row gap">
+            <button class="btn small" id="copyCaption">Salin caption</button>
+            <button class="btn small ghost" id="fixHashtags">Perbaiki hashtag</button>
+          </div>
+
+          <h4>Cek syarat campaign</h4>
+          <ul id="checklist" class="checklist"></ul>
+
+          <div id="lastExport" class="last-export"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="libScrim" class="scrim" hidden></div>
+
+<div id="jobsPanel" class="jobs-panel" hidden>
+  <div class="sec-head"><h2>Proses</h2><button class="btn small ghost" id="jobsClose">Tutup</button></div>
+  <ul id="jobList"></ul>
+</div>
+
+<dialog id="videoDialog">
+  <div class="sec-head"><h2 id="dlgTitle">Preview</h2><button class="btn small ghost" id="dlgClose">Tutup</button></div>
+  <video id="dlgVideo" controls playsinline></video>
+  <p id="dlgNote" class="muted"></p>
+</dialog>
+
+<dialog id="campaignDialog" class="campaign-dialog">
+  <div class="sec-head">
+    <div><h2>Pengaturan campaign</h2><span class="muted" id="campFolder"></span></div>
+    <div class="row gap">
+      <button class="btn small primary" id="campSave">Simpan</button>
+      <button class="btn small ghost" id="campClose">Tutup</button>
+    </div>
+  </div>
+  <div class="camp-grid">
+    <div class="camp-form">
+      <h4>Umum</h4>
+      <label class="field">Nama campaign <input type="text" id="cName"></label>
+      <label class="field">Hashtag wajib, sesuai urutan <input type="text" id="cTags" placeholder="#tag1 #tag2 #tag3"></label>
+      <div class="grid2">
+        <label class="field">FPS output <select id="cFps"><option value="30">30</option><option value="60">60</option></select></label>
+        <label class="field">Bahasa transkrip
+          <select id="cLang"><option value="id">Indonesia</option><option value="en">Inggris</option><option value="">Deteksi otomatis</option></select></label>
+      </div>
+      <label class="field">Checklist syarat (satu per baris) <textarea id="cChecklist" rows="4"></textarea></label>
+      <details>
+        <summary>Lanjutan: keyword momen, prompt transkrip, channel sumber</summary>
+        <label class="field">Keyword momen (pisahkan dengan koma) <textarea id="cKeywords" rows="2"></textarea></label>
+        <label class="field">Prompt transkrip (nama dan istilah yang sering muncul) <textarea id="cPrompt" rows="2"></textarea></label>
+        <label class="field">Channel YouTube yang diizinkan (pisahkan spasi) <input type="text" id="cChannels" placeholder="@namachannel"></label>
+      </details>
+      <div id="brandForms"></div>
+    </div>
+    <div class="camp-preview">
+      <canvas id="campCanvas" width="360" height="640"></canvas>
+      <p class="hint">Posisi watermark dan banner di frame 9:16. Bumper tampil utuh sebelum/sesudah klip.</p>
+    </div>
+  </div>
+</dialog>
+
+<div id="toast" class="toast" hidden></div>
+<video id="outroVideo" preload="auto" playsinline hidden></video>
+<video id="bumperInVideo" preload="auto" playsinline hidden></video>
+<script src="/static/app.js"></script>
+</body>
+</html>
