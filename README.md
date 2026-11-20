@@ -33,7 +33,11 @@ ada), transkrip pakai Whisper (faster-whisper).
 
 ## Mulai
 
-1. Clone repo ini, misalnya ke `D:\clipper`.
+1. Clone repo ini (private, perlu login GitHub):
+
+   ```powershell
+   git clone https://github.com/nmuflih12/auto-clipper-tools.git D:\auto-clipper-tools
+   ```
 2. Klik dua kali `start-clipper.bat`. Pertama kali akan membuat `.venv` dan meng-install dependency
    (`requirements.txt`, termasuk cuBLAS untuk Whisper GPU, ±1 GB).
 3. Browser terbuka di http://127.0.0.1:5170. Kalau belum ada campaign, klik **Buat campaign baru**.
